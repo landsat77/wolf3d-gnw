@@ -37,7 +37,7 @@
 
 #define WF_SAMPLE_RATE         22050
 /* Audio: the firmware's interrupt fills each DMA half buffer (16.7 ms)
- * from a ring the game fills ahead (WF_RING_AHEAD samples, ~93 ms): the
+ * from a ring the game fills ahead (WF_RING_AHEAD samples, ~186 ms): the
  * sound does not depend on when the game gets to it. */
 #define WF_AUDIO_BUFFER_LENGTH 368
 #define WF_RING_SIZE  8192   /* power of 2 */

@@ -107,7 +107,7 @@ static void mix_digi(digichan_t *c, int32_t *acc, int frames)
             int32_t s0 = (int32_t)c->data[idx] - 128;
             int32_t s1 = idx + 1 < c->length ? (int32_t)c->data[idx + 1] - 128 : 0;
             int32_t f = (int32_t)(c->pos & 0xffff);
-            int32_t s = (s0 << 8) + (((s1 - s0) * f) >> 8);
+            int32_t s = s0 * 256 + (((s1 - s0) * f) >> 8);
             acc[i] += (s * gain) >> 8;
         }
         c->pos += digi_step;
@@ -239,7 +239,8 @@ static int position_gain(int leftpos, int rightpos)
     /* Mix_SetPanning(((15 - leftpos) << 4) + 15, ...): the mean of the two */
     int l = ((15 - leftpos) << 4) + 15;
     int r = ((15 - rightpos) << 4) + 15;
-    return (l + r + 1) / 2 + 1; /* 255 -> 256 */
+    /* 255 -> 208: some room for the music next to the shots */
+    return (l + r) * 13 / 32;
 }
 
 void SD_SetPosition(int channel, int leftpos, int rightpos)

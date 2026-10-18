@@ -37,7 +37,7 @@
 #define TAIL_SECONDS  2
 #define RELEASE_MAX_MS 1500
 
-static double gain = 2.0;  /* the OPL output is quiet next to the digitized sounds */
+static double gain = 3.0;  /* the OPL output is quiet next to the digitized sounds */
 
 /* ---- files ---- */
 static uint8_t *load(const char *path, long *size)

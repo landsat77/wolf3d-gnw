@@ -526,6 +526,9 @@ US_LineInput(int x,int y,char *buf,const char *def,boolean escok,
 
 		checkkey = true;
 		curtime = GetTimeCount();
+#ifdef GNW
+		len = (int) strlen(s);  // was used uninitialized by the directions
+#endif
 
 		// After each direction change accept the next change after 250 ms and then everz 125 ms
 		if(ci.dir != lastdir || (curtime - lastdirtime > TickBase / 4 && curtime - lastdirmovetime > TickBase / 8))

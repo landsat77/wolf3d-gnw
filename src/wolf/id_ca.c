@@ -1104,6 +1104,9 @@ void CA_CacheMap (int mapnum)
 #endif
         free(bufferseg);
     }
+#ifdef GNW
+    fclose (file);  // was left open (one FILE per level)
+#endif
 }
 
 //===========================================================================

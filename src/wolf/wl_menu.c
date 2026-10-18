@@ -1593,6 +1593,12 @@ CP_SaveGame (int quick)
             ShootSnd ();
 
             snprintf (input,sizeof(input),"%s",SaveGameNames[which]);
+#ifdef GNW
+            // no keyboard: a name to accept with A (the D-pad edits it)
+            if (!SaveGamesAvail[which] || !input[0])
+                snprintf (input,sizeof(input),"Episode %d Floor %d",
+                          gamestate.episode + 1, gamestate.mapon + 1);
+#endif
             name[7] = which + '0';
 
             fontnumber = 0;
