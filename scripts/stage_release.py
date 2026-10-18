@@ -220,19 +220,20 @@ def stage_release(
 
     archive_name = f"{stem}-{tag_slug}.zip"
     archive_path = out_dir / archive_name
-    # Tyrian: the game data is not shipped (freeware, but not ours). Ship the tool
-    # that builds the .ty pack from the freeware Tyrian 2.1 files, with
-    # the ty_render programs it runs (tools/build_renderers.sh → tools/bin/).
+    # Wolfenstein 3D: the game data is not shipped (the user's own copy of the
+    # full version). Ship the tool that builds the .wf pack from the *.WL6
+    # files, with the wf_render programs it runs (tools/build_renderers.sh →
+    # tools/bin/).
     members = [(sd_bin, f"{sd_dir}/{packed_name}")]
-    for extra in (ROOT / "tools" / "ty_pack.py", ROOT / "INSTALL.md", ROOT / "LICENSE"):
+    for extra in (ROOT / "tools" / "wf_pack.py", ROOT / "INSTALL.md", ROOT / "LICENSE"):
         if extra.exists():
             members.append((extra, extra.name))
-    renderers = sorted((ROOT / "tools" / "bin").glob("ty_render-*"))
+    renderers = sorted((ROOT / "tools" / "bin").glob("wf_render-*"))
     if not renderers:
-        print("warning: no ty_render in tools/bin (run tools/build_renderers.sh)",
+        print("warning: no wf_render in tools/bin (run tools/build_renderers.sh)",
               file=sys.stderr)
     for r in renderers:
-        members.append((r, f"ty_render/{r.name}"))
+        members.append((r, f"wf_render/{r.name}"))
     write_zip(archive_path, members)
 
     debug_archive_name = f"{stem}-{tag_slug}-debug.zip"
