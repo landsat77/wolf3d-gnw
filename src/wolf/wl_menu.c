@@ -355,8 +355,26 @@ static const char *ScanNames[] =
 // Wolfenstein Control Panel!  Ta Da!
 //
 ////////////////////////////////////////////////////////////////////
+#ifdef GNW
+// the buttons of the console are menu keys in the control panel, also
+// when it is opened during a level (wf_sdl.c)
+static void US_ControlPanel_ (ScanCode scancode);
+
 void
 US_ControlPanel (ScanCode scancode)
+{
+    bool inlevel = wf_sdl_in_level ();
+    wf_sdl_set_in_level (false);
+    US_ControlPanel_ (scancode);
+    wf_sdl_set_in_level (inlevel);
+}
+
+static void
+US_ControlPanel_ (ScanCode scancode)
+#else
+void
+US_ControlPanel (ScanCode scancode)
+#endif
 {
     int which;
 

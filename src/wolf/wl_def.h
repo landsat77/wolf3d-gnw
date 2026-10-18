@@ -22,6 +22,11 @@
 #	include <stdarg.h>
 #endif
 #include <SDL.h>
+#ifdef GNW
+#include <setjmp.h>
+#include "wf_sdl.h"
+#include "wf_state.h"
+#endif
 
 #if !defined O_BINARY
 #	define O_BINARY 0
@@ -70,7 +75,9 @@
     #include "f_spear.h"
 #endif
 
-#ifndef __cplusplus
+#if defined(GNW)
+#include <stdbool.h>    // the port's headers use the C99 bool (1 byte too)
+#elif !defined(__cplusplus)
 enum
 {
     false,
@@ -1486,6 +1493,21 @@ void GP2X_ButtonUp (int button);
 #define ISPOINTER(x) ((((uintptr_t)(x)) & ~0xffff) != 0)
 
 #ifndef _WIN32
+#ifdef GNW
+    // the length of the (uninitialized) buffer was strlen(string): the
+    // buffers are made for the numbers (like the DOS itoa)
+    static inline char *itoa (int value, char *string, int radix)
+    {
+        sprintf (string,"%d",value);
+        return string;
+    }
+
+    static inline char *ltoa (long value, char *string, int radix)
+    {
+        sprintf (string,"%ld",value);
+        return string;
+    }
+#else
     static inline char *itoa (int value, char *string, int radix)
     {
         int len = strlen(string) + 1;
@@ -1503,6 +1525,7 @@ void GP2X_ButtonUp (int button);
 
 	    return string;
     }
+#endif
 #endif
 
 

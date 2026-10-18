@@ -11,7 +11,9 @@ Id Software Caching Manager
 */
 
 #include <sys/types.h>
-#if defined _WIN32
+#if defined GNW
+    // only stdio (gnw_wf_glue.h)
+#elif defined _WIN32
     #include <io.h>
 #elif defined _arch_dreamcast
     #include <unistd.h>
@@ -437,6 +439,48 @@ void CA_RLEWexpand (word *source, word *dest, int32_t length, word rlewtag)
 ======================
 */
 
+#ifdef GNW
+/*
+ * The console: the graphics chunks are used in place from the pack.
+ * tools/wf_pack.py stores vgagraph.wl6 already decompressed and deplaned
+ * (CA_CacheGrChunks() below), with the picture table (STRUCTPIC):
+ *   "GWVG", u32 count (NUMCHUNKS), u32 offset[count], u32 size[count]
+ *   (offsets from the start of the file, 0: no chunk), the chunks.
+ */
+void CAL_SetupGrFile (void)
+{
+    char fname[13];
+    uint32_t size;
+    const byte *file;
+    int chunk;
+
+    snprintf (fname,sizeof(fname),"%s%s",gfilename,extension);
+    file = wf_file_data(fname,&size);
+    if (!file || size < 8 || memcmp(file,"GWVG",4))
+        CA_CannotOpen (fname);
+    if (ReadLong((void *)(file + 4)) != NUMCHUNKS)
+        Quit("Wolf4SDL was not compiled for these data files:\n"
+            "%s contains a wrong number of chunks (%u instead of %i)!",
+            fname, ReadLong((void *)(file + 4)), NUMCHUNKS);
+    if (size < 8 + 8 * NUMCHUNKS)
+        CA_CannotOpen (fname);
+
+    for (chunk = 0; chunk < NUMCHUNKS; chunk++)
+    {
+        uint32_t off = ReadLong((void *)(file + 8 + 4 * chunk));
+        uint32_t len = ReadLong((void *)(file + 8 + 4 * (NUMCHUNKS + chunk)));
+        if (!off)
+            continue;
+        if (off + len > size || (off & 3))
+            Quit ("%s is damaged (chunk %i)",fname,chunk);
+        grsegs[chunk] = (byte *) file + off;
+    }
+    if (!grsegs[STRUCTPIC])
+        Quit ("%s is damaged (no picture table)",fname);
+    pictable = (pictabletype *) grsegs[STRUCTPIC];
+    grsegs[STRUCTPIC] = NULL;
+}
+#else
 void CAL_SetupGrFile (void)
 {
     char fname[13];
@@ -516,6 +560,7 @@ void CAL_SetupGrFile (void)
 
     fclose (file);
 }
+#endif
 
 //==========================================================================
 
@@ -660,11 +705,15 @@ void CA_Shutdown (void)
 
     for (i=0; i<NUMCHUNKS; i++)
     {
-        free (grsegs[i]);
+#ifndef GNW
+        free (grsegs[i]);       // in place on the console
+#endif
         grsegs[i] = NULL;
     }
 
+#ifndef GNW
     free (pictable);
+#endif
     pictable = NULL;
 
     for (i = 0; i < NUMMAPS; i++)

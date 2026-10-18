@@ -15,7 +15,12 @@
 #endif
 
 boolean  fullscreen = true;
-#if defined(_arch_dreamcast)
+#if defined(GNW)
+/* the console: VGA mode 13h, 8 bit (src/port/sdl) */
+int16_t  screenWidth = 320;
+int16_t  screenHeight = 200;
+int      screenBits = 8;
+#elif defined(_arch_dreamcast)
 int16_t  screenWidth = 320;
 int16_t  screenHeight = 200;
 int      screenBits = 8;
@@ -109,6 +114,58 @@ void VL_Shutdown (void)
 =======================
 */
 
+#ifdef GNW
+/*
+ * The console: the game draws into screenBuffer (8 bit), VH_UpdateScreen()
+ * copies it to screen (8 bit too, it keeps the picture for FizzleFade()),
+ * which the mini SDL gives to the platform. Both share one palette. Their
+ * pixels are outside the heap when the platform can (wf_plat_big_memory).
+ */
+#include "wf_sdl.h"
+
+static SDL_Surface *create_screen(const char *what)
+{
+    void *pixels = wf_plat_big_memory(what, (size_t)screenWidth * screenHeight);
+    if (pixels)
+        return wf_sdl_surface_on(pixels, screenWidth, screenHeight, screenWidth);
+    return SDL_CreateRGBSurface(0, screenWidth, screenHeight, 8, 0, 0, 0, 0);
+}
+
+void VL_SetVGAPlaneMode (void)
+{
+    int i;
+
+    window = SDL_CreateWindow("Wolfenstein 3D", 0, 0, screenWidth, screenHeight, 0);
+    renderer = SDL_CreateRenderer(window, -1, 0);
+    texture = SDL_CreateTexture(renderer, 0, 0, screenWidth, screenHeight);
+
+    screenBuffer = create_screen("buffer");
+    screen = create_screen("screen");
+    if (!screen || !screenBuffer)
+        Quit("Out of memory (screens)");
+    /* one palette for both */
+    free(screenBuffer->format->palette);
+    screenBuffer->format->palette = screen->format->palette;
+    SDL_SetPaletteColors(screen->format->palette, gamepal, 0, 256);
+    memcpy(curpal, gamepal, sizeof(SDL_Color) * 256);
+    wf_sdl_set_present_palette(screen->format->palette);
+
+    screenPitch = screen->pitch;
+    bufferPitch = screenBuffer->pitch;
+
+    scaleFactor = 1;
+
+    ylookup = SafeMalloc(screenHeight * sizeof(*ylookup));
+    pixelangle = SafeMalloc(screenWidth * sizeof(*pixelangle));
+    wallheight = SafeMalloc(screenWidth * sizeof(*wallheight));
+#if defined(USE_FLOORCEILINGTEX) || defined(USE_CLOUDSKY)
+    spanstart = SafeMalloc((screenHeight / 2) * sizeof(*spanstart));
+#endif
+
+    for (i = 0; i < screenHeight; i++)
+        ylookup[i] = i * bufferPitch;
+}
+#else
 void VL_SetVGAPlaneMode (void)
 {
     int i;
@@ -171,6 +228,7 @@ void VL_SetVGAPlaneMode (void)
     for (i = 0; i < screenHeight; i++)
         ylookup[i] = i * bufferPitch;
 }
+#endif
 
 /*
 =============================================================================
@@ -259,6 +317,13 @@ void VL_SetPalette (SDL_Color *palette, bool forceupdate)
 {
     memcpy(curpal, palette, sizeof(SDL_Color) * 256);
 
+#ifdef GNW
+    /* no hardware palette: the screen is shown again with the new colours
+     * (palette fades) */
+    SDL_SetPaletteColors(screen->format->palette, palette, 0, 256);
+    if (forceupdate)
+        SDL_RenderPresent(renderer);
+#else
     if(screenBits == 8)
         SDL_SetPaletteColors(screen->format->palette, palette, 0, 256);
     else
@@ -267,6 +332,7 @@ void VL_SetPalette (SDL_Color *palette, bool forceupdate)
         if (forceupdate)
             VH_UpdateScreen (screenBuffer);
     }
+#endif
 }
 
 

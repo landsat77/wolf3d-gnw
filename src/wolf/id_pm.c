@@ -22,6 +22,53 @@ byte **PMPages;
 ==================
 */
 
+#ifdef GNW
+/*
+ * The console: the pages are used in place from the pack. tools/wf_pack.py
+ * stores vswap.wl6 already laid out like the code below lays it out in RAM
+ * (the sprites and the sound info page 2 byte aligned):
+ *   "GWPM", u16 ChunksInFile, PMSpriteStart, PMSoundStart, sound info page
+ *   padded, u32 page[ChunksInFile + 1] (offsets from the data), the data
+ *   (4 byte aligned).
+ */
+void PM_Startup (void)
+{
+    char     fname[13];
+    uint32_t size;
+    const byte *file;
+    int      i;
+
+    snprintf (fname,sizeof(fname),"vswap.%s",extension);
+
+    file = wf_file_data(fname,&size);
+    if (!file || size < 12 || memcmp(file,"GWPM",4))
+        CA_CannotOpen(fname);
+
+    ChunksInFile = ReadShort((void *)(file + 4));
+    PMSpriteStart = ReadShort((void *)(file + 6));
+    PMSoundStart = ReadShort((void *)(file + 8));
+    PMSoundInfoPagePadded = ReadShort((void *)(file + 10)) != 0;
+
+    uint32_t header = 12 + 4 * (ChunksInFile + 1);
+    header = (header + 3) & ~3u;
+    if (size < header)
+        Quit ("PM_Startup: The page file \"%s\" is damaged!",fname);
+    const byte *data = file + header;
+
+    PMPageData = NULL;
+    PMPages = SafeMalloc((ChunksInFile + 1) * sizeof(*PMPages));
+    pageLengths = SafeMalloc(ChunksInFile * sizeof(*pageLengths));
+    for (i = 0; i <= ChunksInFile; i++)
+    {
+        uint32_t off = ReadLong((void *)(file + 12 + 4 * i));
+        if (header + off > size)
+            Quit ("PM_Startup: Illegal page offset for page %i",i);
+        PMPages[i] = (byte *) data + off;
+    }
+    for (i = 0; i < ChunksInFile; i++)
+        pageLengths[i] = (word) (PMPages[i + 1] - PMPages[i]);
+}
+#else
 void PM_Startup (void)
 {
     int      i;
@@ -160,6 +207,7 @@ void PM_Startup (void)
 
     fclose (file);
 }
+#endif
 
 
 /*

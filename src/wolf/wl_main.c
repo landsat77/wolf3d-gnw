@@ -836,7 +836,9 @@ void SignonScreen (void)                        // VGA version
 {
     VL_SetVGAPlaneMode ();
 
+#ifndef GNW     // no signon picture on the console (64 KB)
     VL_MemToScreen (signon,320,200,0,0);
+#endif
 }
 
 
@@ -850,6 +852,9 @@ void SignonScreen (void)                        // VGA version
 
 void FinishSignon (void)
 {
+#ifdef GNW
+    return;     // no signon screen: no "Press a key"
+#endif
 #ifndef SPEAR
     VW_Bar (0,189,300,11,VL_GetPixel(0,0));
     WindowX = 0;
@@ -1463,6 +1468,22 @@ static void DemoLoop()
 // main game cycle
 //
 
+#ifdef GNW
+    //
+    // savestates of the console (wf_state.c): a load restarts here
+    // (longjmp), or starts the game here when the homebrew is resumed
+    //
+    if (setjmp (*wf_state_restart_env ()))
+        wf_state_after_restart ();
+    if (wf_state_apply_pending ())
+    {
+        GameLoop ();
+        VW_FadeOut ();
+        StartCPMusic (INTROSONG);
+        goto titleloop;
+    }
+#endif
+
 #ifndef DEMOTEST
 
     #ifndef UPLOAD
@@ -1494,6 +1515,9 @@ static void DemoLoop()
 
 #endif
 
+#ifdef GNW
+titleloop:
+#endif
     while (1)
     {
         while (!param_nowait)
@@ -1780,7 +1804,11 @@ void CheckParameters(int argc, char *argv[])
 ==========================
 */
 
+#ifdef GNW
+int wf_wolf_main (int argc, char *argv[])   // called by wf_core.c
+#else
 int main (int argc, char *argv[])
+#endif
 {
 #if defined(_arch_dreamcast)
     DC_Init();

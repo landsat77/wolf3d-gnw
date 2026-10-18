@@ -255,6 +255,10 @@ void PollKeyboardButtons (void)
     for (i = 0; i < NUMBUTTONS; i++)
         if (Keyboard[buttonscan[i]])
             buttonstate[i] = true;
+#ifdef GNW
+    // the buttons of the console (wf_sdl.c)
+    wf_sdl_poll_buttons (buttonstate, bt_attack, bt_strafe, bt_run, bt_use, bt_nextweapon);
+#endif
 }
 
 
@@ -1273,6 +1277,9 @@ void PlayLoop (void)
     funnyticount = 0;
     memset (buttonstate, 0, sizeof (buttonstate));
     ClearPaletteShifts ();
+#ifdef GNW
+    wf_sdl_set_in_level (true);     // the buttons are the player's actions
+#endif
 
     IN_CenterMouse ();
 
@@ -1341,6 +1348,9 @@ void PlayLoop (void)
         }
     }
     while (!playstate && !startgame);
+#ifdef GNW
+    wf_sdl_set_in_level (false);
+#endif
 
     if (playstate != ex_died)
         FinishPaletteShifts ();
